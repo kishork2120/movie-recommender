@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Movie Recommender</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
+</head>
+
+<body>
+
+  <section class="hero is-primary">
+    <div class="hero-body">
+      <p class="title">
+        Select movie for the recommendation
+      </p>
+      <p class="subtitle">
+        <div class="dropdown is-active">
+          <div class="dropdown-trigger">
+            <button class="button" aria-haspopup="true" aria-controls="dropdown-menu" onclick="toggleDropDown()">
+              <span>Select Movie</span>
+              <span class="icon is-small">
+                <i class="fas fa-angle-down" aria-hidden="true"></i>
+              </span>
+            </button>
+          </div>
+          <div class="dropdown-menu" id="dropdown-menu" role="menu" style="display: none;">
+            <div class="dropdown-content" id="dropdown-content" style="height:10rem;overflow-y: auto;">
+            </div>
+          </div>
+        </div>
+      </p>
+    </div>
+    Current Movie: 
+    <div class="hero-foot p-2">
+      <span class="tag is-link" id="original_title"></span>
+      <span class="tag is-info" id="vote_average"></span>
+      <span class="tag is-success" id="vote_count"></span>
+    </div>
+  </section>
+
+  <h1 class="title is-4">Recommended movies</h1>
+  <div class="table-container">
+    <table class="table is-fullwidth">
+      <thead>
+        <th>Original Title</th>
+        <th>Overview</th>
+        <th>Release Date</th>
+        <th>Vote Average</th>
+        <th>Vote Count</th>
+      </thead>
+      <tbody id="table-body">
+      </tbody>
+    </table>
+  </div>
+
+</body>
+<script>
+
+  const BASE_URL = 'http://localhost:3000/';
+  let page = 1;
+  const movieList = {};
+
+  function selectMovie(data){
+    toggleDropDown()
+    document.querySelector('#original_title').innerHTML = movieList[data].original_title;
+    document.querySelector('#vote_average').innerHTML = movieList[data].vote_average;
+    document.querySelector('#vote_count').innerHTML = movieList[data].vote_count;
+
+    if(!movieList[data].vote_average || !movieList[data].vote_count) return;
+    fetch(`${BASE_URL}getRecommendation?vote_average=${movieList[data].vote_average}&vote_count=${movieList[data].vote_count}&genres=${movieList[data].genres}&_id=${movieList[data]._id}`)
+      .then(data => data.json())
+      .then((data) => {
+        data = data.recommendadtion;
+        
+        document.querySelector('#table-body').innerHTML = data.map((value) => `
+          <tr>
+            <td>${value.original_title}</td>
+            <td>${value.overview}</td>
+            <td>${value.release_date}</td>
+            <td>${value.vote_average}</td>
+            <td>${value.vote_count}</td>
+          </tr>
+        `).join('');
+      })
+  }
+
+  function getAllMovies() {
+    fetch(`${BASE_URL}getAllMovies?page=${page}`)
+      .then(data => data.json())
+      .then((data) => {
+        data = data.movieListdata;
+        
+        data.forEach((value) => {
+          movieList[value._id] = value;
+        })
+
+        document.querySelector('#dropdown-content').innerHTML += data.map((d)=>`<a onclick='selectMovie("${d._id}")' class="dropdown-item">${d.original_title}</a>`).join('')
+      })
+  }
+  getAllMovies();
+
+  function toggleDropDown() {
+    document.querySelector('#dropdown-menu').style.display = (document.querySelector('#dropdown-menu').style.display === 'none') ? 'block' : 'none';
+  }
+
+
+  window.onload = function () {
+    const contentObj = document.querySelector('#dropdown-content');
+    contentObj.addEventListener('scroll', () => {
+      if (contentObj.scrollHeight - contentObj.scrollTop === contentObj.clientHeight) {
+        page++;
+        getAllMovies();
+      }
+    })
+  }
+</script>
+
+</html>
